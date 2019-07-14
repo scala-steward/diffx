@@ -16,7 +16,7 @@ class CTest extends FlatSpec with Matchers with NewDiffForInstances {
   }
 
   it should "calculate diff for product types" in {
-    implicit val st1: Strategy[String] = Strategy.Ignore[String]()
+    implicit val st1: Comparator[String, ValueDiffPrototype[String]] = Comparator.ignoreValue
     compare(p1, p2) shouldBe DiffResultObject(
       "Person",
       Map("name" -> Identical("kasper"), "age" -> DiffResultValue(22, 11), "in" -> Identical(instant)))
@@ -26,5 +26,8 @@ class CTest extends FlatSpec with Matchers with NewDiffForInstances {
     compare(p1, p1) shouldBe Identical(p1)
   }
 
-  private def compare[T: NewDiffFor](t1: T, t2: T) = implicitly[NewDiffFor[T]].compare(t1, t2)
+  private def compare[T: DiffForPrototype](t1: T, t2: T) = {
+    val value = implicitly[DiffForPrototype[T]]
+    value.compare(t1, t2)
+  }
 }

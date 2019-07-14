@@ -4,22 +4,15 @@ import java.time.Instant
 
 trait NewDiffForInstances extends NewDiffForMagnoliaDerivation {
 
-  implicit def diffForString2(implicit st: Strategy[String]): NewDiffFor[String] = new ValueDiff[String](st)
-  implicit def diffForInt2(implicit st: Strategy[Int]): NewDiffFor[Int] = new ValueDiff[Int](st)
-  implicit def diffForInstant2(implicit st: Strategy[Instant]): NewDiffFor[Instant] = new ValueDiff[Instant](st)
+  implicit def diffForString2(implicit st: Comparator[String, ValueDiffPrototype[String]]): DiffForPrototype[String] =
+    new ValueDiffPrototype[String](st)
+  implicit def diffForInt2(implicit st: Comparator[Int, ValueDiffPrototype[Int]]): DiffForPrototype[Int] =
+    new ValueDiffPrototype[Int](st)
+  implicit def diffForInstant2(
+      implicit st: Comparator[Instant, ValueDiffPrototype[Instant]]): DiffForPrototype[Instant] =
+    new ValueDiffPrototype[Instant](st)
 
-  implicit def exported[T](implicit ev: NewDiffFor[T]): NewExported[T] = NewExported(ev)
-
-  implicit def diffForOption[T: NewDiffFor: Strategy]: NewDiffFor[Option[T]] =
-    new ValueDiff[Option[T]](implicitly[Strategy[T]]) {
-      override def compare(left: Option[T], right: Option[T]): DiffResult = {
-        (left, right) match {
-          case (Some(l), Some(r)) => implicitly[NewDiffFor[T]].compare(l, r)
-          case (None, None)       => Identical(None)
-          case (l, r)             => DiffResultValue(l, r)
-        }
-      }
-    }
+  implicit def exported[T](implicit ev: DiffForPrototype[T]): NewExported[T] = NewExported(ev)
 }
 
-case class NewExported[T](v: NewDiffFor[T])
+case class NewExported[T](v: DiffForPrototype[T])

@@ -1,38 +1,54 @@
 package asserts.diff
 
-sealed trait NewDiffFor[T] {
+sealed trait DiffForPrototype[T] {
   def compare(l: T, r: T): DiffResult
-
-  def baseCompare(l: T, r: T): DiffResult = {
-    if (strategy.compare) {
-      compare(l, r)
-    } else {
-      Ignored
-    }
-  }
-
-  def strategy: Strategy[_]
 }
 
-case class ObjNewDiffFor[T](name: String, fields: List[FieldDiff[T, _]], strategy: Strategy[T]) extends NewDiffFor[T] {
+case class ObjDiffForPrototype[T](name: String,
+                                  fields: List[FieldDiffPrototype[T, _]],
+                                  comparator: Comparator[T, ObjDiffForPrototype[T]])
+    extends DiffForPrototype[T] {
   override def compare(l: T, r: T): DiffResult = {
-    val partResults = fields.map {
-      case FieldDiff(fName, accessor, differ) => fName -> differ.baseCompare(accessor(l), accessor(r))
+    comparator.compare(l, r, this)
+  }
+}
+
+case class FieldDiffPrototype[T, U](name: String, accessChild: T => U, newDiffFor: DiffForPrototype[U])
+
+case class ValueDiffPrototype[T](comparator: Comparator[T, ValueDiffPrototype[T]]) extends DiffForPrototype[T] {
+  override def compare(l: T, r: T): DiffResult = {
+    comparator.compare(l, r, this)
+  }
+}
+
+trait Comparator[T, D <: DiffForPrototype[T]] {
+  def compare(l: T, r: T, newDiffFor: D): DiffResult
+}
+
+object Comparator {
+  def ignoreValue[T]: Comparator[T, ValueDiffPrototype[T]] = (_: T, _: T, _: ValueDiffPrototype[T]) => Ignored
+  def ignoreObj[T]: Comparator[T, ObjDiffForPrototype[T]] = (_: T, _: T, _: ObjDiffForPrototype[T]) => Ignored
+}
+
+class ObjectComparator[T] extends Comparator[T, ObjDiffForPrototype[T]] {
+  override def compare(l: T, r: T, obj: ObjDiffForPrototype[T]): DiffResult = {
+    val partResults = obj.fields.map {
+      case FieldDiffPrototype(fName, accessor, differ) =>
+        fName -> (differ match {
+          case d @ ObjDiffForPrototype(_, _, c) => c.compare(accessor(l), accessor(r), d)
+          case d @ ValueDiffPrototype(c)        => c.compare(accessor(l), accessor(r), d)
+        })
     }.toMap
     if (partResults.values.forall(_.isIdentical)) {
       Identical(l)
     } else {
-      DiffResultObject(name, partResults)
+      DiffResultObject(obj.name, partResults)
     }
   }
 }
 
-//fields.map{ f=> f.newDiffFor.compare(f.dereference(f.f(l)),f.f(r)) }
-
-case class FieldDiff[T, U](name: String, accessChild: T => U, newDiffFor: NewDiffFor[U])
-
-case class ValueDiff[T](strategy: Strategy[_]) extends NewDiffFor[T] {
-  def compare(l: T, r: T): DiffResult = {
+class ValueComparator[T] extends Comparator[T, ValueDiffPrototype[T]] {
+  override def compare(l: T, r: T, newDiffFor: ValueDiffPrototype[T]): DiffResult = {
     if (l.toString == r.toString) {
       Identical(l)
     } else {
@@ -40,34 +56,3 @@ case class ValueDiff[T](strategy: Strategy[_]) extends NewDiffFor[T] {
     }
   }
 }
-
-sealed trait Strategy[T] {
-  def compare: Boolean
-}
-
-object Strategy {
-
-  case class Compare[T]() extends Strategy[T] {
-    val compare = true
-  }
-
-  case class Ignore[T]() extends Strategy[T] {
-    val compare = false
-  }
-
-}
-
-//ObjDiff(person, Map("age" ->Accessor(_.age, valueDiff))
-
-//ObjDiff(person, Map("age" ->Accessor(_.parent, objDiff))
-
-//valueDiff(Compare)
-
-object TTT {
-  val person = Person2("kasper")
-//  val a =
-//    ObjNewDiffFor[Person2]("person", List(FieldDiff("name", _.name, ValueDiff(Strategy.Compare))), Strategy.Compare)
-
-}
-
-case class Person2(name: String)
