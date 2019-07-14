@@ -2,11 +2,23 @@ package asserts.diff
 
 sealed trait NewDiffFor[T] {
   def compare(l: T, r: T): DiffResult
+
+  def baseCompare(l: T, r: T): DiffResult = {
+    if (strategy.compare) {
+      compare(l, r)
+    } else {
+      Ignored
+    }
+  }
+
+  def strategy: Strategy[_]
 }
 
-case class ObjNewDiffFor[T](name: String, fields: List[FieldDiff[T, _]], strategy: Strategy) extends NewDiffFor[T] {
+case class ObjNewDiffFor[T](name: String, fields: List[FieldDiff[T, _]], strategy: Strategy[T]) extends NewDiffFor[T] {
   override def compare(l: T, r: T): DiffResult = {
-    val partResults = fields.map { case FieldDiff(fName, accessor, differ) => fName -> differ.compare(accessor(l), accessor(r)) }.toMap
+    val partResults = fields.map {
+      case FieldDiff(fName, accessor, differ) => fName -> differ.baseCompare(accessor(l), accessor(r))
+    }.toMap
     if (partResults.values.forall(_.isIdentical)) {
       Identical(l)
     } else {
@@ -19,7 +31,7 @@ case class ObjNewDiffFor[T](name: String, fields: List[FieldDiff[T, _]], strateg
 
 case class FieldDiff[T, U](name: String, accessChild: T => U, newDiffFor: NewDiffFor[U])
 
-case class ValueDiff[T](strategy: Strategy) extends NewDiffFor[T] {
+case class ValueDiff[T](strategy: Strategy[_]) extends NewDiffFor[T] {
   def compare(l: T, r: T): DiffResult = {
     if (l.toString == r.toString) {
       Identical(l)
@@ -29,13 +41,19 @@ case class ValueDiff[T](strategy: Strategy) extends NewDiffFor[T] {
   }
 }
 
-sealed trait Strategy
+sealed trait Strategy[T] {
+  def compare: Boolean
+}
 
 object Strategy {
 
-  case object Compare extends Strategy
+  case class Compare[T]() extends Strategy[T] {
+    val compare = true
+  }
 
-  case object Ignore extends Strategy
+  case class Ignore[T]() extends Strategy[T] {
+    val compare = false
+  }
 
 }
 
@@ -47,8 +65,8 @@ object Strategy {
 
 object TTT {
   val person = Person2("kasper")
-  val a =
-    ObjNewDiffFor[Person2]("person", List(FieldDiff("name", _.name, ValueDiff(Strategy.Compare))), Strategy.Compare)
+//  val a =
+//    ObjNewDiffFor[Person2]("person", List(FieldDiff("name", _.name, ValueDiff(Strategy.Compare))), Strategy.Compare)
 
 }
 

@@ -17,7 +17,7 @@ trait DiffResult {
   private[diff] def showIndented(indent: Int): String
 }
 
-object Ignored extends DiffResult {
+case object Ignored extends DiffResult {
   override def isIdentical: Boolean = false
 
   override private[diff] def showIndented(indent: Int) = "ignored"

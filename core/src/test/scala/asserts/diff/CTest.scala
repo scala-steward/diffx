@@ -10,12 +10,13 @@ class CTest extends FlatSpec with Matchers with NewDiffForInstances {
   val p1 = Person("kasper", 22, instant)
   val p2 = Person("kasper", 11, instant)
 
-  it should "calculate diff for simple value" in {
+  "C" should "calculate diff for simple value" in {
     compare(1, 2) shouldBe DiffResultValue(1, 2)
     compare(1, 1) shouldBe Identical(1)
   }
 
   it should "calculate diff for product types" in {
+    implicit val st1: Strategy[String] = Strategy.Ignore[String]()
     compare(p1, p2) shouldBe DiffResultObject(
       "Person",
       Map("name" -> Identical("kasper"), "age" -> DiffResultValue(22, 11), "in" -> Identical(instant)))
