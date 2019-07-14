@@ -34,3 +34,5 @@ trait DiffForMagnoliaDerivation {
 
   implicit def gen[T]: DiffFor[T] = macro Magnolia.gen[T]
 }
+
+case class Exported[T](v: DiffFor[T])

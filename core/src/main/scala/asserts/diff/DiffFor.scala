@@ -17,6 +17,12 @@ trait DiffResult {
   private[diff] def showIndented(indent: Int): String
 }
 
+object Ignored extends DiffResult {
+  override def isIdentical: Boolean = false
+
+  override private[diff] def showIndented(indent: Int) = "ignored"
+}
+
 case class DiffResultObject(name: String, fields: Map[String, DiffResult]) extends DiffResultDifferent {
   override def showIndented(indent: Int): String = {
     val showFields = fields.map(f => s"${i(indent)}${f._1}: ${f._2.showIndented(indent + 5)}")

@@ -21,6 +21,19 @@ class BTest extends FlatSpec with Matchers with DiffMatcher {
       Map("name" -> Identical("kasper"), "age" -> DiffResultValue(22, 11), "in" -> Identical(instant)))
   }
 
+  it should "ignore person name" in {
+//    implicit val a:DiffFor[Person] = new Typeclass[Person] {
+//      override def diff(left: Person, right: Person): DiffResult = {
+//        DiffResultObject("person",Map("name"->Identical("not compared"),"age"->implicitly[DiffFor[Int]].diff(left.age,right.age)))
+//      }
+//    }
+    import QuicklensAdapter._
+    val as = implicitly[DiffFor[Person]]
+    val exported1: DiffFor[Person] = implicitly[Exported[Person]].v
+    val a = exported1.modify(_.age)
+    println(a)
+  }
+
   it should "calculate identity for product types" in {
     compare(p1, p1) shouldBe Identical(p1)
   }

@@ -1,6 +1,7 @@
 package asserts.diff
 
 trait DiffForInstances extends DiffForAnyDerivation {
+  implicit def exported[T](implicit ev: DiffFor[T]): Exported[T] = Exported(ev)
 
   implicit def diffForOption[T: DiffFor]: DiffFor[Option[T]] = (left: Option[T], right: Option[T]) => {
     (left, right) match {
